@@ -1,0 +1,26 @@
+/* Minimal app styles and map sizing helpers */
+/* Reset default spacing and ensure the app root fills the viewport */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure map container fills given height when Leaflet is used */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Small tweak to ensure popups look neat with Tailwind */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+}

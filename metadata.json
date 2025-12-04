@@ -1,0 +1,5 @@
+{
+  "name": "AtmosView",
+  "description": "Real-time Weather & Air Quality Intelligence providing multi-source data, historical trends, and city comparison tools.",
+  "requestFramePermissions": []
+}
