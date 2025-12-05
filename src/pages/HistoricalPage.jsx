@@ -28,8 +28,40 @@ const HistoricalPage = () => {
 
 
       if (timeRange === '24h' || timeRange === '7d') {
-        setError('Forecast data (24h/7d) is not available on Historical page. Please use 30d or longer time ranges.');
-        setHistoricalData([]);
+        try {
+          if (timeRange === '24h') {
+            const hourly = await fetchHourlyForecast(selectedCity.lat, selectedCity.lon);
+            if (hourly && hourly.time) {
+              const forecastData = hourly.time.map((time, idx) => ({
+                date: time,
+                temp_om: hourly.temperature_2m[idx],
+                temp_vc: null,
+                aqi_om: null,
+                aqi_vc: null,
+                rain_om: hourly.precipitation?.[idx] || 0,
+                rain_vc: null
+              }));
+              setHistoricalData(forecastData);
+            }
+          } else if (timeRange === '7d') {
+            const daily = await fetchDailyForecast(selectedCity.lat, selectedCity.lon);
+            if (daily && daily.time) {
+              const forecastData = daily.time.map((time, idx) => ({
+                date: time,
+                temp_om: (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
+                temp_vc: null,
+                aqi_om: null,
+                aqi_vc: null,
+                rain_om: daily.precipitation_sum?.[idx] || 0,
+                rain_vc: null
+              }));
+              setHistoricalData(forecastData);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching forecast data:', err);
+          setError('Failed to load forecast data. Please try again.');
+        }
 
         setLoading(false);
         return;
