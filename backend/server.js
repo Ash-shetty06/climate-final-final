@@ -17,7 +17,11 @@ const PORT = process.env.PORT || 5000;
 export const cache = new NodeCache({ stdTTL: 3600 });
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  origin: [
+    'http://localhost:3001',
+    'http://localhost:3002',
+    process.env.CORS_ORIGIN || 'http://localhost:3001'
+  ],
   credentials: true
 }));
 
@@ -59,10 +63,8 @@ const connectDB = async () => {
     console.log('🔄 Attempting to connect to MongoDB...');
 
     await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
 
     console.log('✅ MongoDB connected successfully');
