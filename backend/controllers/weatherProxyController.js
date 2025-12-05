@@ -270,7 +270,7 @@ export const getDailyForecast = async (req, res) => {
             params: {
                 latitude: lat,
                 longitude: lon,
-                daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,uv_index_max,sunrise,sunset,european_aqi,pm2_5_mean,pm10_mean',
+                daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,uv_index_max,sunrise,sunset',
                 forecast_days: 7,
                 timezone: 'auto'
             }
