@@ -8,7 +8,6 @@ import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
 import InsightsPanel from '../components/InsightsPanel';
-import ForecastCharts from '../components/ForecastCharts';
 import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
 import { generateAlerts } from '../utils/weatherUtils';
 
@@ -273,11 +272,7 @@ const DashboardPage = () => {
 
 
 
-      {/* Forecast Charts */}
-      <ForecastCharts
-        hourlyForecast={hourlyForecast}
-        dailyForecast={dailyForecast}
-      />
+
 
 
 
