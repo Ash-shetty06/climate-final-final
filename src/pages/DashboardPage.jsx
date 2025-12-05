@@ -7,7 +7,7 @@ import WeatherAlerts from '../components/WeatherAlerts';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
-import InsightsPanel from '../components/InsightsPanel';
+import HealthAdvicePanel from '../components/HealthAdvicePanel';
 import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
 import { generateAlerts } from '../utils/weatherUtils';
 
@@ -112,17 +112,21 @@ const DashboardPage = () => {
     const weatherSources = [
       { source: 'Open-Meteo', ...weatherData }
     ];
-    if (metData) {
-      weatherSources.push({ source: 'MET Norway', ...metData });
-    }
+    // Always add MET Norway
+    weatherSources.push({
+      source: 'MET Norway',
+      ...(metData || { temp: '--', humidity: '--', windSpeed: '--', lastUpdated: 'Unavailable' })
+    });
 
 
     const aqiSources = [
       { source: 'Open-Meteo', ...aqiData }
     ];
-    if (waqiData) {
-      aqiSources.push({ source: waqiData.source, ...waqiData });
-    }
+    // Always add WAQI
+    aqiSources.push({
+      source: waqiData?.source || 'WAQI (aqicn.org)',
+      ...(waqiData || { aqi: '--', pm25: '--', pm10: '--', lastUpdated: 'Unavailable' })
+    });
 
     return {
       ...currentLocation,
@@ -319,16 +323,16 @@ const DashboardPage = () => {
               </div>
             ) : (
               <>
-                <InsightsPanel
-                  todayTemp={weatherData?.temp}
-                  todayAQI={aqiData?.aqi}
-                  history={historyData}
-                />
-
                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="text-sm font-medium text-slate-700">Current AQI Status</div>
                   <div className={`mt-2 inline-block px-2 py-1 rounded text-xs font-bold border ${aqiStatus.color}`}>{aqiStatus.label}</div>
                 </div>
+
+                <HealthAdvicePanel
+                  aqi={aqiData?.aqi}
+                  temp={weatherData?.temp}
+                  humidity={weatherData?.humidity}
+                />
               </>
             )}
           </div>

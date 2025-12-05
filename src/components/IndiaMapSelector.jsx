@@ -173,10 +173,17 @@ const IndiaMapSelector = ({ selectedCityId, onCitySelect, onLocationSelect }) =>
         <MapContainer center={[22.0, 80.0]} zoom={5} minZoom={4} maxZoom={8} style={{ height: '100%', width: '100%' }}>
           <MapUpdater />
           <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="Clean (Voyager)">
+            <LayersControl.BaseLayer checked name="Clean (Positron)">
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              />
+            </LayersControl.BaseLayer>
+
+            <LayersControl.BaseLayer name="Minimal (Positron No Labels)">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
               />
             </LayersControl.BaseLayer>
 
@@ -200,7 +207,7 @@ const IndiaMapSelector = ({ selectedCityId, onCitySelect, onLocationSelect }) =>
           { }
           {geoJsonData && (
             <>
-              <GeoJSON data={geoJsonData} style={{ color: '#1e40af', weight: 1, fillOpacity: 0.03 }} />
+              <GeoJSON data={geoJsonData} style={{ opacity: 0, fillOpacity: 0 }} />
               <GeoBoundsSetter geojson={geoJsonData} />
             </>
           )}

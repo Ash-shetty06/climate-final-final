@@ -17,7 +17,7 @@ const PollutantTrends = ({ historyData }) => {
         );
     }
 
-    
+
     const filterDataByRange = (data, range) => {
         const now = new Date();
         let daysBack = 7;
@@ -33,93 +33,7 @@ const PollutantTrends = ({ historyData }) => {
 
     const filteredData = filterDataByRange(historyData, timeRange);
 
-    
-    const aqiSeries = [{
-        name: 'AQI',
-        data: filteredData.map(item => ({
-            x: new Date(item.date).getTime(),
-            y: item.aqi_om || item.aqi || 0
-        }))
-    }];
 
-    const aqiOptions = {
-        chart: {
-            type: 'area',
-            height: 300,
-            toolbar: { show: true },
-            zoom: { enabled: true }
-        },
-        colors: ['#9333ea'],
-        dataLabels: { enabled: false },
-        stroke: {
-            curve: 'smooth',
-            width: 2
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shadeIntensity: 1,
-                opacityFrom: 0.4,
-                opacityTo: 0.1,
-            }
-        },
-        xaxis: {
-            type: 'datetime',
-            labels: {
-                datetimeFormatter: {
-                    year: 'yyyy',
-                    month: 'MMM \'yy',
-                    day: 'dd MMM',
-                    hour: 'HH:mm'
-                }
-            }
-        },
-        yaxis: {
-            title: { text: 'AQI Value' },
-            labels: {
-                formatter: (val) => val.toFixed(0)
-            }
-        },
-        tooltip: {
-            x: { format: 'dd MMM yyyy' },
-            y: {
-                formatter: (val) => `${val.toFixed(0)} AQI`
-            }
-        },
-        grid: {
-            borderColor: '#e2e8f0'
-        },
-        annotations: {
-            yaxis: [
-                {
-                    y: 50,
-                    borderColor: '#22c55e',
-                    label: {
-                        text: 'Good',
-                        style: { color: '#fff', background: '#22c55e' }
-                    }
-                },
-                {
-                    y: 100,
-                    borderColor: '#eab308',
-                    label: {
-                        text: 'Moderate',
-                        style: { color: '#fff', background: '#eab308' }
-                    }
-                },
-                {
-                    y: 150,
-                    borderColor: '#f97316',
-                    label: {
-                        text: 'Unhealthy',
-                        style: { color: '#fff', background: '#f97316' }
-                    }
-                }
-            ]
-        }
-    };
-
-    
     const pollutantSeries = [
         {
             name: 'PM2.5',
@@ -201,14 +115,14 @@ const PollutantTrends = ({ historyData }) => {
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-purple-600" />
-                    Air Quality Trends
+                    Pollutant Trends
                 </h3>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setTimeRange('7d')}
                         className={`px-3 py-1 text-sm rounded-lg transition-colors ${timeRange === '7d'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         7 Days
@@ -216,8 +130,8 @@ const PollutantTrends = ({ historyData }) => {
                     <button
                         onClick={() => setTimeRange('30d')}
                         className={`px-3 py-1 text-sm rounded-lg transition-colors ${timeRange === '30d'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         30 Days
@@ -225,8 +139,8 @@ const PollutantTrends = ({ historyData }) => {
                     <button
                         onClick={() => setTimeRange('90d')}
                         className={`px-3 py-1 text-sm rounded-lg transition-colors ${timeRange === '90d'
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                     >
                         90 Days
@@ -234,18 +148,6 @@ const PollutantTrends = ({ historyData }) => {
                 </div>
             </div>
 
-            {}
-            <div className="mb-8">
-                <h4 className="text-md font-semibold text-slate-700 mb-3">Historical AQI Pattern</h4>
-                <Chart
-                    options={aqiOptions}
-                    series={aqiSeries}
-                    type="area"
-                    height={300}
-                />
-            </div>
-
-            {}
             <div>
                 <h4 className="text-md font-semibold text-slate-700 mb-3">Pollutant Concentrations</h4>
                 <Chart
@@ -256,7 +158,6 @@ const PollutantTrends = ({ historyData }) => {
                 />
             </div>
 
-            {}
             <div className="mt-4 p-4 bg-slate-50 rounded-lg">
                 <p className="text-xs text-slate-600 mb-2 font-semibold">AQI Categories:</p>
                 <div className="flex flex-wrap gap-3 text-xs">

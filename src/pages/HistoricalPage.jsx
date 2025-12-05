@@ -38,8 +38,12 @@ const HistoricalPage = () => {
                 temp_vc: null,
                 aqi_om: null,
                 aqi_vc: null,
-                rain_om: hourly.precipitation?.[idx] || 0,
-                rain_vc: null
+                rain_om: hourly.precipitation_probability?.[idx] || 0,
+                rain_vc: null,
+                pm25: hourly.pm2_5?.[idx] || 0,
+                pm10: hourly.pm10?.[idx] || 0,
+                o3: hourly.ozone?.[idx] || 0,
+                no2: hourly.nitrogen_dioxide?.[idx] || 0
               }));
               setHistoricalData(forecastData);
             }
@@ -61,7 +65,11 @@ const HistoricalPage = () => {
                   aqi_om: aqiData ? aqiData.aqi : null,
                   aqi_vc: null,
                   rain_om: daily.precipitation_sum?.[idx] || 0,
-                  rain_vc: null
+                  rain_vc: null,
+                  pm25: aqiData ? aqiData.pm25 : 0,
+                  pm10: aqiData ? aqiData.pm10 : 0,
+                  o3: aqiData ? aqiData.o3 : 0,
+                  no2: aqiData ? aqiData.no2 : 0
                 };
               });
               setHistoricalData(forecastData);

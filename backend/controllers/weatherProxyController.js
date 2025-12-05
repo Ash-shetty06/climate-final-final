@@ -163,12 +163,12 @@ export const getHistoricalData = async (req, res) => {
                 longitude: lon,
                 start_date: startDate,
                 end_date: adjustedEndDate,
-                hourly: 'pm2_5',
+                hourly: 'pm2_5,pm10,ozone,nitrogen_dioxide',
                 timezone: 'UTC'
             }
         }).catch(err => {
             console.warn("AQI data not available:", err.message);
-            return { data: { hourly: { time: [], pm2_5: [] } } };
+            return { data: { hourly: { time: [], pm2_5: [], pm10: [], ozone: [], nitrogen_dioxide: [] } } };
         });
 
         const [openMeteoRes, vcRes, aqiRes] = await Promise.all([
@@ -179,27 +179,29 @@ export const getHistoricalData = async (req, res) => {
 
         const omDaily = openMeteoRes.data.daily;
         const vcDays = vcRes.data.days || [];
-        const aqiHourly = aqiRes.data.hourly || { time: [], pm2_5: [] };
+        const aqiHourly = aqiRes.data.hourly || { time: [], pm2_5: [], pm10: [], ozone: [], nitrogen_dioxide: [] };
 
         if (!omDaily || !omDaily.time) {
             return res.status(500).json({ success: false, message: 'No weather data returned from API' });
         }
 
-        const getDailyAqi = (dateStr) => {
-            if (!aqiHourly.time || aqiHourly.time.length === 0) return 0;
+        const getDailyAvg = (dateStr, param) => {
+            if (!aqiHourly.time || aqiHourly.time.length === 0 || !aqiHourly[param]) return 0;
             const dayIndices = aqiHourly.time
                 .map((t, i) => t.startsWith(dateStr) ? i : -1)
                 .filter(i => i !== -1);
             if (dayIndices.length === 0) return 0;
-            const sum = dayIndices.reduce((acc, idx) => acc + (aqiHourly.pm2_5[idx] || 0), 0);
-            const avgPm25 = sum / dayIndices.length;
-            let aqi = avgPm25 * 4;
-            if (aqi > 500) aqi = 500;
-            return Math.round(aqi);
+            const sum = dayIndices.reduce((acc, idx) => acc + (aqiHourly[param][idx] || 0), 0);
+            return sum / dayIndices.length;
         };
 
         const formattedData = omDaily.time.map((date, index) => {
             const vcDay = vcDays.find(d => d.datetime === date);
+            const avgPm25 = getDailyAvg(date, 'pm2_5');
+
+            // Calculate AQI from PM2.5
+            let aqi = Math.round(avgPm25 * 4);
+            if (aqi > 500) aqi = 500;
 
             return {
                 date: date,
@@ -207,8 +209,12 @@ export const getHistoricalData = async (req, res) => {
                 temp_vc: vcDay ? vcDay.temp : null,
                 rain_om: omDaily.rain_sum[index] || 0,
                 rain_vc: vcDay ? vcDay.precip : null,
-                aqi_om: getDailyAqi(date),
-                aqi_vc: vcDay ? vcDay.aqi : null
+                aqi_om: aqi,
+                aqi_vc: vcDay ? vcDay.aqi : null,
+                pm25: avgPm25,
+                pm10: getDailyAvg(date, 'pm10'),
+                o3: getDailyAvg(date, 'ozone'),
+                no2: getDailyAvg(date, 'nitrogen_dioxide')
             };
         });
 
@@ -234,7 +240,7 @@ export const getHourlyForecast = async (req, res) => {
             return res.status(200).json({ success: true, data: cachedData, cached: true });
         }
 
-        const response = await axios.get(CURRENT_WEATHER_API_URL, {
+        const weatherPromise = axios.get(CURRENT_WEATHER_API_URL, {
             params: {
                 latitude: lat,
                 longitude: lon,
@@ -244,8 +250,37 @@ export const getHourlyForecast = async (req, res) => {
             }
         });
 
-        cache.set(cacheKey, response.data.hourly);
-        res.status(200).json({ success: true, data: response.data.hourly });
+        const aqiPromise = axios.get(AQI_API_URL, {
+            params: {
+                latitude: lat,
+                longitude: lon,
+                hourly: 'pm2_5,pm10,ozone,nitrogen_dioxide',
+                forecast_hours: 24,
+                timezone: 'auto'
+            }
+        }).catch(err => {
+            console.warn("AQI forecast error:", err.message);
+            return { data: { hourly: {} } };
+        });
+
+        const [weatherRes, aqiRes] = await Promise.all([weatherPromise, aqiPromise]);
+
+        const weatherHourly = weatherRes.data.hourly;
+        const aqiHourly = aqiRes.data.hourly || {};
+
+        const mergedData = {
+            time: weatherHourly.time,
+            temperature_2m: weatherHourly.temperature_2m,
+            precipitation_probability: weatherHourly.precipitation_probability,
+            weather_code: weatherHourly.weather_code,
+            pm2_5: aqiHourly.pm2_5 || [],
+            pm10: aqiHourly.pm10 || [],
+            ozone: aqiHourly.ozone || [],
+            nitrogen_dioxide: aqiHourly.nitrogen_dioxide || []
+        };
+
+        cache.set(cacheKey, mergedData);
+        res.status(200).json({ success: true, data: mergedData });
     } catch (error) {
         console.error('Error fetching hourly forecast:', error.message);
         res.status(500).json({ success: false, message: error.message });
@@ -299,7 +334,10 @@ export const getMetNorwayWeather = async (req, res) => {
         }
 
         const response = await axios.get(MET_NORWAY_API_URL, {
-            params: { lat, lon }
+            params: { lat, lon },
+            headers: {
+                'User-Agent': 'ClimateApp/1.0'
+            }
         });
 
         const timeseries = response.data.properties.timeseries[0];
@@ -317,8 +355,9 @@ export const getMetNorwayWeather = async (req, res) => {
         cache.set(cacheKey, weatherData);
         res.status(200).json({ success: true, data: weatherData });
     } catch (error) {
-        console.warn('MET Norway API error:', error.message);
-        res.status(500).json({ success: false, message: error.message });
+        console.warn('MET Norway API error:', error.response?.data || error.message);
+        // Return null data instead of 500 so frontend can handle it gracefully
+        res.status(200).json({ success: true, data: null });
     }
 };
 
@@ -336,13 +375,19 @@ export const getWaqiFeed = async (req, res) => {
             return res.status(200).json({ success: true, data: cachedData, cached: true });
         }
 
+        if (!process.env.WAQI_KEY) {
+            console.warn('WAQI_KEY is missing');
+            return res.status(200).json({ success: true, data: null });
+        }
+
         // FIXED: Removed spaces from URL
         const response = await axios.get(`${WAQI_API_URL}/geo:${lat};${lon}/`, {
             params: { token: process.env.WAQI_KEY }
         });
 
         if (response.data.status !== 'ok') {
-            throw new Error(response.data.data);
+            console.warn('WAQI API returned error:', response.data.data);
+            return res.status(200).json({ success: true, data: null });
         }
 
         const data = response.data.data;
@@ -357,7 +402,7 @@ export const getWaqiFeed = async (req, res) => {
         res.status(200).json({ success: true, data: waqiData });
     } catch (error) {
         console.warn('WAQI API error:', error.message);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(200).json({ success: true, data: null });
     }
 };
 
@@ -425,7 +470,7 @@ export const getAQIForecast = async (req, res) => {
             params: {
                 latitude: lat,
                 longitude: lon,
-                hourly: 'pm2_5,pm10,european_aqi',
+                hourly: 'pm2_5,pm10,ozone,nitrogen_dioxide',
                 forecast_days: days,
                 timezone: 'auto'
             }
@@ -443,14 +488,30 @@ export const getAQIForecast = async (req, res) => {
                 const startIdx = day * hoursPerDay;
                 const endIdx = startIdx + hoursPerDay;
 
-                const dayAQI = hourly.european_aqi.slice(startIdx, endIdx).filter(v => v !== null);
-                const avgAQI = dayAQI.length > 0
-                    ? Math.round(dayAQI.reduce((sum, val) => sum + val, 0) / dayAQI.length)
-                    : null;
+                const getAvg = (param) => {
+                    const vals = hourly[param] ? hourly[param].slice(startIdx, endIdx).filter(v => v !== null) : [];
+                    return vals.length > 0 ? vals.reduce((sum, val) => sum + val, 0) / vals.length : null;
+                };
+
+                const avgPM25 = getAvg('pm2_5');
+                const avgPM10 = getAvg('pm10');
+                const avgO3 = getAvg('ozone');
+                const avgNO2 = getAvg('nitrogen_dioxide');
+
+                // Calculate AQI from PM2.5
+                let aqi = null;
+                if (avgPM25 !== null) {
+                    aqi = Math.round(avgPM25 * 4);
+                    if (aqi > 500) aqi = 500;
+                }
 
                 dailyAQI.push({
                     date: hourly.time[startIdx].split('T')[0],
-                    aqi: avgAQI
+                    aqi: aqi,
+                    pm25: avgPM25,
+                    pm10: avgPM10,
+                    o3: avgO3,
+                    no2: avgNO2
                 });
             }
         }
