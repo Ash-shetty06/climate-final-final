@@ -407,6 +407,62 @@ export const searchCities = async (req, res) => {
     }
 };
 
+export const getAQIForecast = async (req, res) => {
+    try {
+        const { lat, lon, days = 7 } = req.query;
+
+        if (!lat || !lon) {
+            return res.status(400).json({ success: false, message: 'Latitude and longitude required' });
+        }
+
+        const cacheKey = `aqi-forecast-${lat}-${lon}-${days}d`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json({ success: true, data: cachedData, cached: true });
+        }
+
+        const response = await axios.get(AQI_API_URL, {
+            params: {
+                latitude: lat,
+                longitude: lon,
+                hourly: 'pm2_5,pm10,european_aqi',
+                forecast_days: days,
+                timezone: 'auto'
+            }
+        });
+
+        // Calculate daily average AQI from hourly data
+        const hourly = response.data.hourly;
+        const dailyAQI = [];
+
+        if (hourly && hourly.time) {
+            const hoursPerDay = 24;
+            const numDays = Math.floor(hourly.time.length / hoursPerDay);
+
+            for (let day = 0; day < numDays; day++) {
+                const startIdx = day * hoursPerDay;
+                const endIdx = startIdx + hoursPerDay;
+
+                const dayAQI = hourly.european_aqi.slice(startIdx, endIdx).filter(v => v !== null);
+                const avgAQI = dayAQI.length > 0
+                    ? Math.round(dayAQI.reduce((sum, val) => sum + val, 0) / dayAQI.length)
+                    : null;
+
+                dailyAQI.push({
+                    date: hourly.time[startIdx].split('T')[0],
+                    aqi: avgAQI
+                });
+            }
+        }
+
+        cache.set(cacheKey, dailyAQI);
+        res.status(200).json({ success: true, data: dailyAQI });
+    } catch (error) {
+        console.error('Error fetching AQI forecast:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 export const clearCache = (req, res) => {
     cache.flushAll();
     res.status(200).json({ success: true, message: 'Cache cleared' });

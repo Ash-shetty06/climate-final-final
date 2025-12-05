@@ -4,7 +4,7 @@ import Chart from 'react-apexcharts';
 import DownloadDataButtons from '../components/DownloadDataButtons';
 import PollutantTrends from '../components/PollutantTrends';
 import DailyPollutionAverages from '../components/DailyPollutionAverages';
-import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
+import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast, fetchAQIForecast } from '../services/weatherApi';
 import { Search, MapPin, TrendingUp, TrendingDown, Thermometer } from 'lucide-react';
 
 const HistoricalPage = () => {
@@ -44,17 +44,26 @@ const HistoricalPage = () => {
               setHistoricalData(forecastData);
             }
           } else if (timeRange === '7d') {
-            const daily = await fetchDailyForecast(selectedCity.lat, selectedCity.lon);
+            const [daily, aqiForecast] = await Promise.all([
+              fetchDailyForecast(selectedCity.lat, selectedCity.lon),
+              fetchAQIForecast(selectedCity.lat, selectedCity.lon, 7)
+            ]);
+
             if (daily && daily.time) {
-              const forecastData = daily.time.map((time, idx) => ({
-                date: time,
-                temp_om: (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
-                temp_vc: null,
-                aqi_om: null,
-                aqi_vc: null,
-                rain_om: daily.precipitation_sum?.[idx] || 0,
-                rain_vc: null
-              }));
+              const forecastData = daily.time.map((time, idx) => {
+                const dateStr = time;
+                const aqiData = aqiForecast.find(a => a.date === dateStr);
+
+                return {
+                  date: time,
+                  temp_om: (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
+                  temp_vc: null,
+                  aqi_om: aqiData ? aqiData.aqi : null,
+                  aqi_vc: null,
+                  rain_om: daily.precipitation_sum?.[idx] || 0,
+                  rain_vc: null
+                };
+              });
               setHistoricalData(forecastData);
             }
           }

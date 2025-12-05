@@ -98,3 +98,15 @@ export const fetchDailyForecast = async (lat, lon) => {
         return null;
     }
 };
+
+export const fetchAQIForecast = async (lat, lon, days = 7) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/aqi-forecast`, {
+            params: { lat, lon, days }
+        });
+        return response.data.data || [];
+    } catch (error) {
+        console.error('Error fetching AQI forecast:', error);
+        return [];
+    }
+};

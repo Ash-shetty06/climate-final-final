@@ -8,13 +8,15 @@ import {
     getMetNorwayWeather,
     getWaqiFeed,
     searchCities,
-    clearCache
+    clearCache,
+    getAQIForecast
 } from '../controllers/weatherProxyController.js';
 
 const router = express.Router();
 
 router.get('/current', getCurrentWeather);
 router.get('/aqi', getCurrentAQI);
+router.get('/aqi-forecast', getAQIForecast);
 router.get('/historical', getHistoricalData);
 router.get('/hourly', getHourlyForecast);
 router.get('/daily', getDailyForecast);
