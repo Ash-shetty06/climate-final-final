@@ -10,7 +10,6 @@ import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
 import HealthAdvicePanel from '../components/HealthAdvicePanel';
 import InsightsPanel from '../components/InsightsPanel';
-import AQIHeatmap from '../components/AQIHeatmap';
 import ForecastCharts from '../components/ForecastCharts';
 import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
 import { generateAlerts } from '../utils/weatherUtils';
@@ -296,8 +295,7 @@ const DashboardPage = () => {
         dailyForecast={dailyForecast}
       />
 
-      {/* AQI Heatmap */}
-      <AQIHeatmap />
+
 
       { }
       <section className="bg-white rounded-2xl p-0">
