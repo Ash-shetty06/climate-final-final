@@ -15,9 +15,6 @@ const HistoricalPage = () => {
   const [error, setError] = useState(null);
 
 
-  const [hourlyForecast, setHourlyForecast] = useState(null);
-  const [dailyForecast, setDailyForecast] = useState(null);
-
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -31,38 +28,8 @@ const HistoricalPage = () => {
 
 
       if (timeRange === '24h' || timeRange === '7d') {
-        const [hourly, daily] = await Promise.all([
-          fetchHourlyForecast(selectedCity.lat, selectedCity.lon),
-          fetchDailyForecast(selectedCity.lat, selectedCity.lon)
-        ]);
-
-        setHourlyForecast(hourly);
-        setDailyForecast(daily);
-
-
-        if (timeRange === '24h' && hourly) {
-          const forecastData = hourly.time.map((time, idx) => ({
-            date: time,
-            temp_om: hourly.temperature_2m[idx],
-            temp_vc: null,
-            aqi_om: null,
-            aqi_vc: null,
-            rain_om: null,
-            rain_vc: null
-          }));
-          setHistoricalData(forecastData);
-        } else if (timeRange === '7d' && daily) {
-          const forecastData = daily.time.map((time, idx) => ({
-            date: time,
-            temp_om: (daily.temperature_2m_max[idx] + daily.temperature_2m_min[idx]) / 2,
-            temp_vc: null,
-            aqi_om: daily.european_aqi ? daily.european_aqi[idx] : null,
-            aqi_vc: null,
-            rain_om: daily.precipitation_sum ? daily.precipitation_sum[idx] : null,
-            rain_vc: null
-          }));
-          setHistoricalData(forecastData);
-        }
+        setError('Forecast data (24h/7d) is not available on Historical page. Please use 30d or longer time ranges.');
+        setHistoricalData([]);
 
         setLoading(false);
         return;
@@ -102,14 +69,6 @@ const HistoricalPage = () => {
 
       setHistoricalData(data);
 
-
-      const [hourly, daily] = await Promise.all([
-        fetchHourlyForecast(selectedCity.lat, selectedCity.lon),
-        fetchDailyForecast(selectedCity.lat, selectedCity.lon)
-      ]);
-
-      setHourlyForecast(hourly);
-      setDailyForecast(daily);
 
       setLoading(false);
     };
