@@ -7,6 +7,7 @@ import NodeCache from 'node-cache';
 import citiesRoutes from './routes/cities.js';
 import historicalRoutes from './routes/historical.js';
 import alertsRoutes from './routes/alerts.js';
+import weatherProxyRoutes from './routes/weatherProxy.js';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use((err, req, res, next) => {
 app.use('/api/cities', citiesRoutes);
 app.use('/api/historical', historicalRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/weather', weatherProxyRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -61,8 +63,8 @@ const connectDB = async () => {
 
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    process.exit(1);
+    console.warn('⚠️  MongoDB connection failed:', error.message);
+    console.log('📡 Server will run without MongoDB (weather proxy will still work)');
   }
 };
 

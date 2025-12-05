@@ -8,16 +8,18 @@ import EnhancedMetrics from '../components/EnhancedMetrics';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
-import DownloadDataButtons from '../components/DownloadDataButtons';
+import HealthAdvicePanel from '../components/HealthAdvicePanel';
 import InsightsPanel from '../components/InsightsPanel';
-import { fetchCurrentWeather, fetchCurrentAQI, fetchHistoricalData, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
+import AQIHeatmap from '../components/AQIHeatmap';
+import ForecastCharts from '../components/ForecastCharts';
+import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
 import { generateAlerts } from '../utils/weatherUtils';
 
 const DashboardPage = () => {
   const [selectedCityId, setSelectedCityId] = useState('bengaluru');
   const [clickedCoord, setClickedCoord] = useState(null);
 
-  
+
   const defaultCity = CITIES.find(c => c.id === 'bengaluru') || CITIES[0];
   const [currentLocation, setCurrentLocation] = useState({
     name: defaultCity.name,
@@ -39,7 +41,7 @@ const DashboardPage = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        
+
         const [weather, aqi, met, waqi, hourly, daily] = await Promise.all([
           fetchCurrentWeather(currentLocation.lat, currentLocation.lon),
           fetchCurrentAQI(currentLocation.lat, currentLocation.lon),
@@ -56,11 +58,11 @@ const DashboardPage = () => {
         setHourlyForecast(hourly);
         setDailyForecast(daily);
 
-        
+
         const newAlerts = generateAlerts(weather, aqi, { daily });
         setAlerts(newAlerts);
 
-        
+
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(endDate.getDate() - 30);
@@ -105,12 +107,12 @@ const DashboardPage = () => {
     setModalMetric(null);
   };
 
-  
-  
+
+
   const enrichedCityData = useMemo(() => {
     if (!weatherData || !aqiData) return { ...currentLocation, id: 'custom' };
 
-    
+
     const weatherSources = [
       { source: 'Open-Meteo', ...weatherData }
     ];
@@ -118,7 +120,7 @@ const DashboardPage = () => {
       weatherSources.push({ source: 'MET Norway', ...metData });
     }
 
-    
+
     const aqiSources = [
       { source: 'Open-Meteo', ...aqiData }
     ];
@@ -137,7 +139,7 @@ const DashboardPage = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-10">
 
-      {}
+      { }
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
@@ -150,23 +152,23 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {}
+      { }
       <WeatherAlerts alerts={alerts} />
 
-      {}
+      { }
       <HourlyForecast data={hourlyForecast} />
 
-      {}
+      { }
       <DailyForecast data={dailyForecast} />
 
-      {}
+      { }
       <section className="bg-white rounded-2xl p-6 mb-6">
         <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
           Current Weather & Metrics
           {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>}
         </h2>
 
-        {}
+        { }
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           <SummaryCard
             title="Temperature"
@@ -209,7 +211,7 @@ const DashboardPage = () => {
           />
         </div>
 
-        {}
+        { }
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <SummaryCard
             title="UV Index"
@@ -270,7 +272,34 @@ const DashboardPage = () => {
         </div>
       </section>
 
-      {}
+      {/* Enhanced Metrics */}
+      <EnhancedMetrics
+        feelsLike={weatherData?.feelsLike}
+        pressure={weatherData?.pressure}
+        uvIndex={weatherData?.uvIndex}
+        sunrise={weatherData?.sunrise}
+        sunset={weatherData?.sunset}
+        visibility={weatherData?.visibility}
+        cloudCover={weatherData?.cloudCover}
+      />
+
+      {/* Health Advice Panel */}
+      <HealthAdvicePanel
+        aqi={aqiData?.aqi}
+        temp={weatherData?.temp}
+        humidity={weatherData?.humidity}
+      />
+
+      {/* Forecast Charts */}
+      <ForecastCharts
+        hourlyForecast={hourlyForecast}
+        dailyForecast={dailyForecast}
+      />
+
+      {/* AQI Heatmap */}
+      <AQIHeatmap />
+
+      { }
       <section className="bg-white rounded-2xl p-0">
         <h2 className="text-xl font-semibold text-slate-800 mb-2">Location & Insights</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -329,7 +358,7 @@ const DashboardPage = () => {
         </div>
       </section>
 
-      {}
+      { }
       <SourceModal isOpen={isModalOpen} metric={modalMetric} city={enrichedCityData} onClose={closeModal} />
     </div >
   );

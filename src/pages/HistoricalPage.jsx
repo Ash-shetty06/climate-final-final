@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CITIES } from '../utils/constants';
 import Chart from 'react-apexcharts';
 import DownloadDataButtons from '../components/DownloadDataButtons';
-import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
+import PollutantTrends from '../components/PollutantTrends';
+import DailyPollutionAverages from '../components/DailyPollutionAverages';
+import { fetchHistoricalData, searchCities } from '../services/weatherApi';
 import { Search, MapPin, TrendingUp, TrendingDown, Thermometer } from 'lucide-react';
 
 const HistoricalPage = () => {
@@ -12,11 +14,11 @@ const HistoricalPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  
+
   const [hourlyForecast, setHourlyForecast] = useState(null);
   const [dailyForecast, setDailyForecast] = useState(null);
 
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -27,7 +29,7 @@ const HistoricalPage = () => {
       setLoading(true);
       setError(null);
 
-      
+
       if (timeRange === '24h' || timeRange === '7d') {
         const [hourly, daily] = await Promise.all([
           fetchHourlyForecast(selectedCity.lat, selectedCity.lon),
@@ -37,7 +39,7 @@ const HistoricalPage = () => {
         setHourlyForecast(hourly);
         setDailyForecast(daily);
 
-        
+
         if (timeRange === '24h' && hourly) {
           const forecastData = hourly.time.map((time, idx) => ({
             date: time,
@@ -66,7 +68,7 @@ const HistoricalPage = () => {
         return;
       }
 
-      
+
       const endDate = new Date();
       const startDate = new Date();
 
@@ -100,7 +102,7 @@ const HistoricalPage = () => {
 
       setHistoricalData(data);
 
-      
+
       const [hourly, daily] = await Promise.all([
         fetchHourlyForecast(selectedCity.lat, selectedCity.lon),
         fetchDailyForecast(selectedCity.lat, selectedCity.lon)
@@ -140,10 +142,10 @@ const HistoricalPage = () => {
     setSearchResults([]);
   };
 
-  
+
   const vcFailed = historicalData.length > 0 && historicalData.every(d => d.temp_vc === null);
 
-  
+
   const dates = historicalData.map(d => d.date);
 
   const tempSeries = [
@@ -161,7 +163,7 @@ const HistoricalPage = () => {
     { name: 'Rain (Visual Crossing)', data: historicalData.map(d => ({ x: d.date, y: d.rain_vc })) }
   ];
 
-  
+
   const commonOptions = {
     chart: {
       zoom: { enabled: true, type: 'x', autoScaleYaxis: true },
@@ -231,7 +233,7 @@ const HistoricalPage = () => {
       title: { text: 'AQI' },
       labels: { formatter: (val) => val ? val.toFixed(0) : val }
     },
-    
+
     ...(timeRange === '7d' || timeRange === '30d' || timeRange === '90d' ? {
       annotations: {
         yaxis: [
@@ -298,7 +300,7 @@ const HistoricalPage = () => {
         </div>
       )}
 
-      {}
+      { }
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 flex flex-col sm:flex-row gap-6">
         <div className="flex flex-col gap-2 w-full sm:w-1/3 relative">
           <label className="text-sm font-semibold text-slate-600">Search City (India)</label>
@@ -316,7 +318,7 @@ const HistoricalPage = () => {
             )}
           </div>
 
-          {}
+          { }
           {searchResults.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {searchResults.map((city) => (
@@ -358,7 +360,7 @@ const HistoricalPage = () => {
         </div>
       </div>
 
-      {}
+      { }
       {loading ? (
         <div className="flex justify-center items-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -371,7 +373,7 @@ const HistoricalPage = () => {
       ) : historicalData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          {}
+          { }
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
             <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Temperature Trend (°C)</h3>
             <div className="w-full h-[350px]">
@@ -379,7 +381,7 @@ const HistoricalPage = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
             <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">AQI Trend (Est.)</h3>
             <div className="w-full h-[350px]">
@@ -387,12 +389,22 @@ const HistoricalPage = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm lg:col-span-2 hover:shadow-md transition-all">
             <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Rainfall Trend (mm)</h3>
             <div className="w-full h-[350px]">
               <Chart key={`rain-${timeRange}-${historicalData.length}`} options={rainOptions} series={rainSeries} type="line" height={350} />
             </div>
+          </div>
+
+          {/* Pollutant Trends Analysis */}
+          <div className="lg:col-span-2">
+            <PollutantTrends historyData={historicalData} />
+          </div>
+
+          {/* Daily Pollution Averages */}
+          <div className="lg:col-span-2">
+            <DailyPollutionAverages historyData={historicalData} />
           </div>
         </div>
       ) : (
