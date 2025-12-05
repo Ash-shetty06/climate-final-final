@@ -7,7 +7,6 @@ import WeatherAlerts from '../components/WeatherAlerts';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
-import HealthAdvicePanel from '../components/HealthAdvicePanel';
 import InsightsPanel from '../components/InsightsPanel';
 import ForecastCharts from '../components/ForecastCharts';
 import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
@@ -272,12 +271,7 @@ const DashboardPage = () => {
 
 
 
-      {/* Health Advice Panel */}
-      <HealthAdvicePanel
-        aqi={aqiData?.aqi}
-        temp={weatherData?.temp}
-        humidity={weatherData?.humidity}
-      />
+
 
       {/* Forecast Charts */}
       <ForecastCharts
