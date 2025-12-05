@@ -4,7 +4,6 @@ import { Droplets, Wind, Thermometer, CloudRain, GaugeCircle, CloudSun, Sun, Sun
 import IndiaMapSelector from '../components/IndiaMapSelector';
 import SummaryCard from '../components/SummaryCard';
 import WeatherAlerts from '../components/WeatherAlerts';
-import EnhancedMetrics from '../components/EnhancedMetrics';
 import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
@@ -271,16 +270,7 @@ const DashboardPage = () => {
         </div>
       </section>
 
-      {/* Enhanced Metrics */}
-      <EnhancedMetrics
-        feelsLike={weatherData?.feelsLike}
-        pressure={weatherData?.pressure}
-        uvIndex={weatherData?.uvIndex}
-        sunrise={weatherData?.sunrise}
-        sunset={weatherData?.sunset}
-        visibility={weatherData?.visibility}
-        cloudCover={weatherData?.cloudCover}
-      />
+
 
       {/* Health Advice Panel */}
       <HealthAdvicePanel
