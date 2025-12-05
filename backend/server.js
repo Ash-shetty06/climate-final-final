@@ -56,15 +56,22 @@ const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/atmosview';
 
+    console.log('🔄 Attempting to connect to MongoDB...');
+
     await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
     });
 
     console.log('✅ MongoDB connected successfully');
+    console.log(`📊 Database: ${mongoose.connection.name}`);
   } catch (error) {
-    console.warn('⚠️  MongoDB connection failed:', error.message);
-    console.log('📡 Server will run without MongoDB (weather proxy will still work)');
+    console.error('❌ MongoDB connection failed:', error.message);
+    console.log('⚠️  Server will continue running without database');
+    console.log('⚠️  Authentication and user features will not work');
+    console.log('⚠️  Weather proxy endpoints will still function');
   }
 };
 
