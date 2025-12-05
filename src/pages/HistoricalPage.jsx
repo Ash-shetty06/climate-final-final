@@ -4,7 +4,7 @@ import Chart from 'react-apexcharts';
 import DownloadDataButtons from '../components/DownloadDataButtons';
 import PollutantTrends from '../components/PollutantTrends';
 import DailyPollutionAverages from '../components/DailyPollutionAverages';
-import { fetchHistoricalData, searchCities } from '../services/weatherApi';
+import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
 import { Search, MapPin, TrendingUp, TrendingDown, Thermometer } from 'lucide-react';
 
 const HistoricalPage = () => {
