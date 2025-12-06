@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: 6
     },
+    role: {
+        type: String,
+        enum: ['user', 'researcher'],
+        default: 'user'
+    },
     firstName: {
         type: String,
         trim: true

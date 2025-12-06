@@ -8,6 +8,8 @@ import citiesRoutes from './routes/cities.js';
 import historicalRoutes from './routes/historical.js';
 import alertsRoutes from './routes/alerts.js';
 import weatherProxyRoutes from './routes/weatherProxy.js';
+import authRoutes from './routes/auth.js';
+import researchDataRoutes from './routes/researchData.js';
 
 dotenv.config();
 
@@ -36,6 +38,8 @@ app.use('/api/cities', citiesRoutes);
 app.use('/api/historical', historicalRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/weather', weatherProxyRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/research', researchDataRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({
