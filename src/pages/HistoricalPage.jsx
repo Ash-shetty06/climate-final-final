@@ -5,7 +5,8 @@ import DownloadDataButtons from '../components/DownloadDataButtons';
 import PollutantTrends from '../components/PollutantTrends';
 import DailyPollutionAverages from '../components/DailyPollutionAverages';
 import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast, fetchAQIForecast } from '../services/weatherApi';
-import { Search, MapPin, TrendingUp, TrendingDown, Thermometer } from 'lucide-react';
+import { getResearchData } from '../services/researchDataService';
+import { Search, MapPin, TrendingUp, TrendingDown, Thermometer, Database, Cloud } from 'lucide-react';
 
 const HistoricalPage = () => {
   const [selectedCity, setSelectedCity] = useState(CITIES[0]);
@@ -13,6 +14,8 @@ const HistoricalPage = () => {
   const [historicalData, setHistoricalData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [dataSource, setDataSource] = useState('api'); // 'api' or 'researcher'
+  const [researcherData, setResearcherData] = useState([]);
 
 
 
@@ -26,7 +29,45 @@ const HistoricalPage = () => {
       setLoading(true);
       setError(null);
 
+      // If researcher data source is selected, fetch from research API
+      if (dataSource === 'researcher') {
+        try {
+          const response = await getResearchData(selectedCity.name, timeRange, null);
 
+          if (response.success && response.data && response.data.length > 0) {
+            // Flatten all researcher data into a single array
+            const allData = response.data.flatMap(upload => upload.data || []);
+
+            // Convert to the format expected by charts
+            const formattedData = allData.map(item => ({
+              date: item.date,
+              temp_om: item.temp_om || null,
+              temp_vc: item.temp_vc || null,
+              aqi_om: item.aqi_om || null,
+              aqi_vc: item.aqi_vc || null,
+              rain_om: item.rain_om || null,
+              rain_vc: item.rain_vc || null,
+              pm25: item.pm25 || 0,
+              pm10: item.pm10 || 0,
+              o3: item.o3 || 0,
+              no2: item.no2 || 0
+            }));
+
+            setHistoricalData(formattedData);
+          } else {
+            setError('No researcher data available for this city and time range.');
+            setHistoricalData([]);
+          }
+        } catch (err) {
+          console.error('Error fetching researcher data:', err);
+          setError('Failed to load researcher data. Please try again.');
+          setHistoricalData([]);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Original API data fetching logic
       if (timeRange === '24h' || timeRange === '7d') {
         try {
           if (timeRange === '24h') {
@@ -123,7 +164,7 @@ const HistoricalPage = () => {
     };
 
     loadData();
-  }, [selectedCity, timeRange]);
+  }, [selectedCity, timeRange, dataSource]);
 
   const handleSearch = (e) => {
     const query = e.target.value;
@@ -365,6 +406,32 @@ const HistoricalPage = () => {
             <option value="5yr">Last 5 Years</option>
             <option value="10yr">Last 10 Years</option>
           </select>
+        </div>
+
+        <div className="flex flex-col gap-2 w-full sm:w-1/3">
+          <label className="text-sm font-semibold text-slate-600">Data Source</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDataSource('api')}
+              className={`flex-1 p-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${dataSource === 'api'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+            >
+              <Cloud className="w-4 h-4" />
+              API Data
+            </button>
+            <button
+              onClick={() => setDataSource('researcher')}
+              className={`flex-1 p-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${dataSource === 'researcher'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+            >
+              <Database className="w-4 h-4" />
+              Researcher
+            </button>
+          </div>
         </div>
       </div>
 
