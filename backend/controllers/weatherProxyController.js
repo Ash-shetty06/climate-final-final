@@ -199,7 +199,6 @@ export const getHistoricalData = async (req, res) => {
             const vcDay = vcDays.find(d => d.datetime === date);
             const avgPm25 = getDailyAvg(date, 'pm2_5');
 
-            // Calculate AQI from PM2.5
             let aqi = Math.round(avgPm25 * 4);
             if (aqi > 500) aqi = 500;
 

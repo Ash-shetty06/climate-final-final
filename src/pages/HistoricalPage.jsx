@@ -5,8 +5,8 @@ import DownloadDataButtons from '../components/DownloadDataButtons';
 import PollutantTrends from '../components/PollutantTrends';
 import DailyPollutionAverages from '../components/DailyPollutionAverages';
 import { fetchHistoricalData, searchCities, fetchHourlyForecast, fetchDailyForecast, fetchAQIForecast } from '../services/weatherApi';
-import { getResearchData } from '../services/researchDataService';
-import { Search, MapPin, TrendingUp, TrendingDown, Thermometer, Database, Cloud } from 'lucide-react';
+import { getResearchData, uploadData } from '../services/researchDataService';
+import { Search, MapPin, TrendingUp, TrendingDown, Thermometer, Database, Cloud, Upload, FileText } from 'lucide-react';
 
 const HistoricalPage = () => {
   const [selectedCity, setSelectedCity] = useState(CITIES[0]);
@@ -23,6 +23,12 @@ const HistoricalPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeout = useRef(null);
+
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadDataType, setUploadDataType] = useState('temperature');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -191,6 +197,66 @@ const HistoricalPage = () => {
     setSearchResults([]);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && !file.name.endsWith('.csv')) {
+      setUploadError('Please upload a CSV file');
+      return;
+    }
+    setUploadFile(file);
+    setUploadError('');
+    setUploadSuccess('');
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!uploadFile) {
+      setUploadError('Please select a CSV file');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+    setUploadSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('city', selectedCity.name);
+      formData.append('dataType', uploadDataType);
+      formData.append('timeRange', timeRange);
+
+      const response = await uploadData(formData);
+      setUploadSuccess(`Successfully uploaded ${response.data.recordCount} records!`);
+      setUploadFile(null);
+      document.getElementById('upload-file-input').value = '';
+
+      try {
+        const res = await getResearchData(selectedCity.name, timeRange, null);
+        if (res.success && res.data && res.data.length > 0) {
+          const allData = res.data.flatMap(upload => upload.data || []);
+          const formattedData = allData.map(item => ({
+            date: item.date,
+            temp_om: item.temp_om || null,
+            aqi_om: item.aqi_om || null,
+            rain_om: item.rain_om || null,
+            pm25: item.pm25 || 0,
+            pm10: item.pm10 || 0,
+            o3: item.o3 || 0,
+            no2: item.no2 || 0
+          }));
+          setHistoricalData(formattedData);
+        }
+      } catch (loadErr) {
+        console.error('Error loading data after upload:', loadErr);
+      }
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   const vcFailed = historicalData.length > 0 && historicalData.every(d => d.temp_vc === null);
 
@@ -198,19 +264,19 @@ const HistoricalPage = () => {
   const dates = historicalData.map(d => d.date);
 
   const tempSeries = [
-    { name: 'Temp (Open-Meteo)', data: historicalData.map(d => ({ x: d.date, y: d.temp_om })) },
-    { name: 'Temp (Visual Crossing)', data: historicalData.map(d => ({ x: d.date, y: d.temp_vc })) }
-  ];
+    { name: 'Temp (Open-Meteo)', data: historicalData.filter(d => d.temp_om != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.temp_om) })) },
+    { name: 'Temp (Visual Crossing)', data: historicalData.filter(d => d.temp_vc != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.temp_vc) })) }
+  ].filter(s => s.data.length > 0);
 
   const aqiSeries = [
-    { name: 'AQI (Open-Meteo)', data: historicalData.map(d => ({ x: d.date, y: d.aqi_om })) },
-    { name: 'AQI (Visual Crossing)', data: historicalData.map(d => ({ x: d.date, y: d.aqi_vc })) }
-  ];
+    { name: 'AQI (Open-Meteo)', data: historicalData.filter(d => d.aqi_om != null && d.aqi_om > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_om) })) },
+    { name: 'AQI (Visual Crossing)', data: historicalData.filter(d => d.aqi_vc != null && d.aqi_vc > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_vc) })) }
+  ].filter(s => s.data.length > 0);
 
   const rainSeries = [
-    { name: 'Rain (Open-Meteo)', data: historicalData.map(d => ({ x: d.date, y: d.rain_om })) },
-    { name: 'Rain (Visual Crossing)', data: historicalData.map(d => ({ x: d.date, y: d.rain_vc })) }
-  ];
+    { name: 'Rain (Open-Meteo)', data: historicalData.filter(d => d.rain_om != null && d.rain_om > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_om) })) },
+    { name: 'Rain (Visual Crossing)', data: historicalData.filter(d => d.rain_vc != null && d.rain_vc > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_vc) })) }
+  ].filter(s => s.data.length > 0);
 
 
   const commonOptions = {
@@ -333,7 +399,7 @@ const HistoricalPage = () => {
         <DownloadDataButtons city={selectedCity} historicalData={historicalData} />
       </div>
 
-      {vcFailed && (
+      {dataSource === 'api' && vcFailed && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-start gap-3">
           <div className="text-yellow-600 mt-1">⚠️</div>
           <div>
@@ -414,8 +480,8 @@ const HistoricalPage = () => {
             <button
               onClick={() => setDataSource('api')}
               className={`flex-1 p-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${dataSource === 'api'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
               <Cloud className="w-4 h-4" />
@@ -424,8 +490,8 @@ const HistoricalPage = () => {
             <button
               onClick={() => setDataSource('researcher')}
               className={`flex-1 p-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${dataSource === 'researcher'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
               <Database className="w-4 h-4" />
@@ -434,6 +500,82 @@ const HistoricalPage = () => {
           </div>
         </div>
       </div>
+
+      {dataSource === 'researcher' && (
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Upload className="w-5 h-5 text-purple-600" />
+            <h2 className="text-xl font-bold text-purple-900">Upload Research Data</h2>
+          </div>
+
+          {uploadSuccess && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">{uploadSuccess}</p>
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{uploadError}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleUploadSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Data Type (for organization)
+                </label>
+                <select
+                  value={uploadDataType}
+                  onChange={(e) => setUploadDataType(e.target.value)}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                >
+                  <option value="temperature">Temperature</option>
+                  <option value="aqi">Air Quality (AQI)</option>
+                  <option value="rainfall">Rainfall</option>
+                  <option value="pollutants">Pollutants</option>
+                  <option value="daily_averages">Daily Averages</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  CSV File (containing date, temperature, aqi, etc.)
+                </label>
+                <input
+                  id="upload-file-input"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                />
+                {uploadFile && (
+                  <p className="mt-2 text-sm text-slate-600 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    {uploadFile.name} ({(uploadFile.size / 1024).toFixed(2)} KB)
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={uploading || !uploadFile}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                'Uploading...'
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  Upload Data
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
 
       { }
       {loading ? (
@@ -448,29 +590,33 @@ const HistoricalPage = () => {
       ) : historicalData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          { }
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-            <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Temperature Trend (°C)</h3>
-            <div className="w-full h-[350px]">
-              <Chart key={`temp-${timeRange}-${historicalData.length}`} options={tempOptions} series={tempSeries} type="line" height={350} />
-            </div>
-          </div>
 
-          { }
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-            <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">AQI Trend (Est.)</h3>
-            <div className="w-full h-[350px]">
-              <Chart key={`aqi-${timeRange}-${historicalData.length}`} options={aqiOptions} series={aqiSeries} type={timeRange === '7d' || timeRange === '30d' || timeRange === '90d' ? 'area' : 'line'} height={350} />
+          {tempSeries.length > 0 && (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+              <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Temperature Trend (°C)</h3>
+              <div className="w-full h-[350px]">
+                <Chart key={`temp-${timeRange}-${historicalData.length}`} options={tempOptions} series={tempSeries} type="line" height={350} />
+              </div>
             </div>
-          </div>
+          )}
 
-          { }
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm lg:col-span-2 hover:shadow-md transition-all">
-            <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Rainfall Trend (mm)</h3>
-            <div className="w-full h-[350px]">
-              <Chart key={`rain-${timeRange}-${historicalData.length}`} options={rainOptions} series={rainSeries} type="line" height={350} />
+          {aqiSeries.length > 0 && (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+              <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">AQI Trend (Est.)</h3>
+              <div className="w-full h-[350px]">
+                <Chart key={`aqi-${timeRange}-${historicalData.length}`} options={aqiOptions} series={aqiSeries} type={timeRange === '7d' || timeRange === '30d' || timeRange === '90d' ? 'area' : 'line'} height={350} />
+              </div>
             </div>
-          </div>
+          )}
+
+          {rainSeries.length > 0 && (
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm lg:col-span-2 hover:shadow-md transition-all">
+              <h3 className="font-bold text-lg text-slate-800 mb-2 px-2">Rainfall Trend (mm)</h3>
+              <div className="w-full h-[350px]">
+                <Chart key={`rain-${timeRange}-${historicalData.length}`} options={rainOptions} series={rainSeries} type="line" height={350} />
+              </div>
+            </div>
+          )}
 
           {/* Pollutant Trends Analysis */}
           <div className="lg:col-span-2">

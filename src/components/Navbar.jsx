@@ -43,12 +43,6 @@ const Navbar = () => {
             <Link to="/dashboard" className={getLinkClass('/dashboard')}>Dashboard</Link>
             <Link to="/historical" className={getLinkClass('/historical')}>Historical</Link>
             <Link to="/compare" className={getLinkClass('/compare')}>Compare</Link>
-            {isResearcher() && (
-              <Link to="/upload" className={getLinkClass('/upload')}>
-                <Upload className="w-4 h-4 inline mr-1" />
-                Upload Data
-              </Link>
-            )}
           </div>
           <div className="flex items-center gap-3">
             {user ? (

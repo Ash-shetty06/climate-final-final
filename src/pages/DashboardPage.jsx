@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CITIES } from '../utils/constants';
-import { Droplets, Wind, Thermometer, CloudRain, GaugeCircle, CloudSun, Sun, Sunrise, Sunset, Eye, Cloud } from 'lucide-react';
+import { Droplets, Wind, Thermometer, CloudRain, GaugeCircle, CloudSun, Sun, Sunrise, Sunset, Eye, Cloud, Search, Heart, MapPin } from 'lucide-react';
 import IndiaMapSelector from '../components/IndiaMapSelector';
 import SummaryCard from '../components/SummaryCard';
 import WeatherAlerts from '../components/WeatherAlerts';
@@ -8,13 +8,22 @@ import HourlyForecast from '../components/HourlyForecast';
 import DailyForecast from '../components/DailyForecast';
 import SourceModal from '../components/SourceModal';
 import HealthAdvicePanel from '../components/HealthAdvicePanel';
-import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast } from '../services/weatherApi';
+import { fetchCurrentWeather, fetchCurrentAQI, fetchMetNorwayWeather, fetchWaqiFeed, fetchHourlyForecast, fetchDailyForecast, searchCities, fetchHistoricalData } from '../services/weatherApi';
 import { generateAlerts } from '../utils/weatherUtils';
+import { addFavorite, removeFavorite, getCurrentUser, isAuthenticated } from '../services/authService';
 
 const DashboardPage = () => {
   const [selectedCityId, setSelectedCityId] = useState('bengaluru');
   const [clickedCoord, setClickedCoord] = useState(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef(null);
+
+  const [user, setUser] = useState(getCurrentUser());
+  const [favorites, setFavorites] = useState(user?.favoriteCities || []);
 
   const defaultCity = CITIES.find(c => c.id === 'bengaluru') || CITIES[0];
   const [currentLocation, setCurrentLocation] = useState({
@@ -32,6 +41,80 @@ const DashboardPage = () => {
   const [dailyForecast, setDailyForecast] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const handleSearch = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowDropdown(true);
+
+    // Debounce could be good, but direct call for now
+    const results = await searchCities(query);
+    setSearchResults(results);
+    setIsSearching(false);
+  };
+
+  const handleSelectCity = (city) => {
+    setCurrentLocation({
+      name: city.name,
+      lat: city.lat,
+      lon: city.lon
+    });
+
+    // Check if it's one of our predefined cities to highlight on map
+    const predefinedCity = CITIES.find(c => c.name.toLowerCase() === city.name.toLowerCase());
+    if (predefinedCity) {
+      setSelectedCityId(predefinedCity.id);
+    } else {
+      setSelectedCityId(null); // Custom location
+    }
+
+    setSearchQuery('');
+    setShowDropdown(false);
+  };
+
+  const toggleFavorite = async () => {
+    if (!isAuthenticated()) {
+      alert('Please login to save favorites!');
+      return;
+    }
+
+    const isFav = favorites.some(fav => fav.name === currentLocation.name);
+
+    try {
+      if (isFav) {
+        const fav = favorites.find(f => f.name === currentLocation.name);
+        if (fav) {
+          await removeFavorite(fav.cityId || 'custom');
+          const updatedUser = getCurrentUser();
+          setFavorites(updatedUser.favoriteCities);
+          setUser(updatedUser);
+        }
+      } else {
+        const cityData = {
+          cityId: selectedCityId || `custom-${Date.now()}`,
+          name: currentLocation.name,
+          lat: currentLocation.lat,
+          lon: currentLocation.lon
+        };
+        await addFavorite(cityData);
+        const updatedUser = getCurrentUser();
+        setFavorites(updatedUser.favoriteCities);
+        setUser(updatedUser);
+      }
+    } catch (err) {
+      console.error('Fav error', err);
+    }
+  };
+
+  const isCurrentFavorite = favorites.some(fav => fav.name === currentLocation.name);
 
   useEffect(() => {
     const loadData = async () => {
@@ -112,17 +195,14 @@ const DashboardPage = () => {
     const weatherSources = [
       { source: 'Open-Meteo', ...weatherData }
     ];
-    // Always add MET Norway
     weatherSources.push({
       source: 'MET Norway',
       ...(metData || { temp: '--', humidity: '--', windSpeed: '--', lastUpdated: 'Unavailable' })
     });
 
-
     const aqiSources = [
       { source: 'Open-Meteo', ...aqiData }
     ];
-    // Always add WAQI
     aqiSources.push({
       source: waqiData?.source || 'WAQI (aqicn.org)',
       ...(waqiData || { aqi: '--', pm25: '--', pm10: '--', lastUpdated: 'Unavailable' })
@@ -140,15 +220,76 @@ const DashboardPage = () => {
     <div className="max-w-7xl mx-auto p-6 space-y-10">
 
       { }
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4 border-b border-slate-200 pb-6">
+      {/* Header & Search */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6 border-b border-slate-200 pb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
             <CloudSun className="w-8 h-8 text-blue-500" />
             Dashboard
           </h1>
-          <p className="text-slate-500 mt-1">
-            Showing real-time data for <span className="font-bold text-blue-700">{currentLocation.name}</span> (selected from map)
-          </p>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-slate-500">
+              Weather for <span className="font-bold text-blue-700 text-lg">{currentLocation.name}</span>
+            </p>
+            <button onClick={toggleFavorite} className="focus:outline-none transition-transform hover:scale-110">
+              <Heart className={`w-6 h-6 ${isCurrentFavorite ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar & Favorites Dropdown */}
+        <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-4 relative">
+          <div className="relative w-full sm:w-80" ref={searchRef}>
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Search city (e.g. Mumbai, Tokyo)..."
+              value={searchQuery}
+              onChange={handleSearch}
+              onFocus={() => { if (searchQuery.length >= 2) setShowDropdown(true); }}
+            />
+
+            {/* Search Results Dropdown */}
+            {showDropdown && (
+              <div className="absolute z-50 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                {isSearching ? (
+                  <div className="px-4 py-2 text-slate-500">Searching...</div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((city) => (
+                    <div
+                      key={city.id}
+                      className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 text-slate-900"
+                      onClick={() => handleSelectCity(city)}
+                    >
+                      <span className="block truncate font-medium">{city.name}</span>
+                      <span className="block truncate text-xs text-slate-500">{city.state ? `${city.state}, ` : ''}{city.country}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-slate-500">No cities found</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Favorites List */}
+          {favorites.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 max-w-full lg:max-w-xs scrollbar-hide">
+              {favorites.map(fav => (
+                <button
+                  key={fav.cityId + fav.name}
+                  onClick={() => handleSelectCity(fav)}
+                  className="flex items-center gap-1 px-3 py-1 bg-red-50 text-red-600 text-xs rounded-full border border-red-100 whitespace-nowrap hover:bg-red-100"
+                >
+                  <Heart className="w-3 h-3 fill-red-500" />
+                  {fav.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -3,29 +3,24 @@ import { API_BASE_URL } from './apiConfig';
 
 const AUTH_API = `${API_BASE_URL}/auth`;
 
-// Get token from localStorage
 export const getToken = () => {
     return localStorage.getItem('token');
 };
 
-// Get current user from localStorage
 export const getCurrentUser = () => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
 };
 
-// Check if user is authenticated
 export const isAuthenticated = () => {
     return !!getToken();
 };
 
-// Check if user is researcher
 export const isResearcher = () => {
     const user = getCurrentUser();
     return user && user.role === 'researcher';
 };
 
-// Register new user
 export const register = async (email, password, username, role = 'user') => {
     try {
         const response = await axios.post(`${AUTH_API}/register`, {
@@ -36,7 +31,6 @@ export const register = async (email, password, username, role = 'user') => {
         });
 
         if (response.data.success) {
-            // Store token and user info
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
         }
@@ -47,7 +41,6 @@ export const register = async (email, password, username, role = 'user') => {
     }
 };
 
-// Login user
 export const login = async (email, password) => {
     try {
         const response = await axios.post(`${AUTH_API}/login`, {
@@ -56,7 +49,6 @@ export const login = async (email, password) => {
         });
 
         if (response.data.success) {
-            // Store token and user info
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.user));
         }
@@ -67,13 +59,11 @@ export const login = async (email, password) => {
     }
 };
 
-// Logout user
 export const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
 };
 
-// Get current user from server (verify token)
 export const fetchCurrentUser = async () => {
     try {
         const token = getToken();
@@ -93,9 +83,52 @@ export const fetchCurrentUser = async () => {
 
         return response.data;
     } catch (error) {
-        // Token might be expired
         logout();
         throw error.response?.data || { success: false, message: 'Authentication failed' };
+    }
+};
+
+export const addFavorite = async (cityData) => {
+    try {
+        const token = getToken();
+        if (!token) throw new Error('Not authenticated');
+
+        const response = await axios.post(`${AUTH_API}/favorites`, cityData, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+            const user = getCurrentUser();
+            if (user) {
+                user.favoriteCities = response.data.favoriteCities;
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+        }
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Failed to add favorite' };
+    }
+};
+
+export const removeFavorite = async (cityId) => {
+    try {
+        const token = getToken();
+        if (!token) throw new Error('Not authenticated');
+
+        const response = await axios.delete(`${AUTH_API}/favorites/${cityId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.data.success) {
+            const user = getCurrentUser();
+            if (user) {
+                user.favoriteCities = response.data.favoriteCities;
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+        }
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { success: false, message: 'Failed to remove favorite' };
     }
 };
 

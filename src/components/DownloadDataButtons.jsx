@@ -23,23 +23,27 @@ const DownloadDataButtons = ({ city, historicalData }) => {
   };
 
   const handleDownloadCSV = () => {
-    
+
     let csvContent = "data:text/csv;charset=utf-8,";
 
     csvContent += "Type,Source,Value1,Value2,Value3,LastUpdated\n";
 
-    city.weather.forEach(w => {
-      csvContent += `Weather,${w.source},Temp:${w.temp},Humidity:${w.humidity},Wind:${w.windSpeed},${w.lastUpdated}\n`;
-    });
+    if (city.weather && Array.isArray(city.weather)) {
+      city.weather.forEach(w => {
+        csvContent += `Weather,${w.source},Temp:${w.temp},Humidity:${w.humidity},Wind:${w.windSpeed},${w.lastUpdated}\n`;
+      });
+    }
 
-    city.aqi.forEach(a => {
-      csvContent += `AQI,${a.source},Index:${a.aqi},PM2.5:${a.pm25},PM10:${a.pm10},${a.lastUpdated}\n`;
-    });
+    if (city.aqi && Array.isArray(city.aqi)) {
+      city.aqi.forEach(a => {
+        csvContent += `AQI,${a.source},Index:${a.aqi},PM2.5:${a.pm25},PM10:${a.pm10},${a.lastUpdated}\n`;
+      });
+    }
 
-    if (historicalData) {
+    if (historicalData && Array.isArray(historicalData)) {
       csvContent += "\nHistorical Data\nDate,Temp,AQI,Rainfall\n";
       historicalData.forEach(h => {
-        csvContent += `${h.date},${h.temp},${h.aqi},${h.rainfall}\n`;
+        csvContent += `${h.date},${h.temp_om || h.temp_vc || '-'},${h.aqi_om || h.aqi_vc || '-'},${h.rain_om || h.rain_vc || '-'}\n`;
       });
     }
 

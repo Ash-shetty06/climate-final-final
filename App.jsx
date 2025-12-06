@@ -7,7 +7,7 @@ import HistoricalPage from './src/pages/HistoricalPage';
 import ComparePage from './src/pages/ComparePage';
 import LoginPage from './src/pages/LoginPage';
 import RegisterPage from './src/pages/RegisterPage';
-import ResearcherUploadPage from './src/pages/ResearcherUploadPage';
+
 import ProtectedRoute from './src/components/ProtectedRoute';
 import Footer from './src/components/Footer';
 
@@ -24,14 +24,7 @@ const App = () => {
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/upload"
-              element={
-                <ProtectedRoute role="researcher">
-                  <ResearcherUploadPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/register" element={<RegisterPage />} />
           </Routes>
         </main>
         <Footer />
