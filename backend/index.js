@@ -93,6 +93,72 @@ function requireRole(role) {
 
 app.get('/', (req, res) => res.json({ ok: true, msg: 'Weatherr backend running' }));
 
+// Frontend auth endpoints (with username support and token response)
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, username, role } = req.body || {};
+  if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
+  
+  try {
+    const existing = await User.findOne({ email }).exec();
+    if (existing) return res.status(409).json({ success: false, message: 'User already exists' });
+    
+    const hash = await bcrypt.hash(password, 10);
+    const user = new User({ email, password: hash, role: role || 'user' });
+    await user.save();
+    
+    const token = generateToken(user);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'None',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Registered successfully',
+      token,
+      user: { email: user.email, role: user.role, username: username || email.split('@')[0] }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password, role } = req.body || {};
+  if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
+  
+  try {
+    const user = await User.findOne({ email }).exec();
+    if (!user) return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
+    
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    
+    if (role && role !== user.role) return res.status(403).json({ success: false, message: 'Role mismatch. Login not allowed for requested role.' });
+    
+    const token = generateToken(user);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'None',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    
+    res.json({ 
+      success: true,
+      token,
+      user: { email: user.email, role: user.role, username: email.split('@')[0] }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Original auth endpoints (for AuthModal component)
 app.post('/api/register', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ message: 'email and password required' });
