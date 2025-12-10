@@ -128,8 +128,8 @@ app.post('/api/login', async (req, res) => {
     // Set httpOnly cookie so frontend doesn't need to store token in localStorage
     const cookieOptions = {
       httpOnly: true,
-      secure: false, // Allow in development (HTTP)
-      sameSite: 'None', // Allow cross-site requests
+      secure: false, // HTTP in local/network
+      sameSite: 'lax', // allow normal navigation and XHR from same IP/port origin
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     };
     res.cookie('token', token, cookieOptions);
