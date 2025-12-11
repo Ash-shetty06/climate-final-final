@@ -35,40 +35,10 @@ const HistoricalPage = () => {
       setLoading(true);
       setError(null);
 
-      // If researcher data source is selected, fetch from research API
+      // If researcher data source is selected, don't auto-load - just show upload UI
       if (dataSource === 'researcher') {
-        try {
-          const response = await getResearchData(selectedCity.name, timeRange, null);
-
-          if (response.success && response.data && response.data.length > 0) {
-            // Flatten all researcher data into a single array
-            const allData = response.data.flatMap(upload => upload.data || []);
-
-            // Convert to the format expected by charts
-            const formattedData = allData.map(item => ({
-              date: item.date,
-              temp_om: item.temp_om || null,
-              temp_vc: item.temp_vc || null,
-              aqi_om: item.aqi_om || null,
-              aqi_vc: item.aqi_vc || null,
-              rain_om: item.rain_om || null,
-              rain_vc: item.rain_vc || null,
-              pm25: item.pm25 || 0,
-              pm10: item.pm10 || 0,
-              o3: item.o3 || 0,
-              no2: item.no2 || 0
-            }));
-
-            setHistoricalData(formattedData);
-          } else {
-            setError('No researcher data available for this city and time range.');
-            setHistoricalData([]);
-          }
-        } catch (err) {
-          console.error('Error fetching researcher data:', err);
-          setError('Failed to load researcher data. Please try again.');
-          setHistoricalData([]);
-        }
+        setHistoricalData([]);
+        setError(null); // Clear any previous errors
         setLoading(false);
         return;
       }
@@ -269,15 +239,43 @@ const HistoricalPage = () => {
   ].filter(s => s.data.length > 0);
 
   const aqiSeries = [
-    { name: 'AQI (Open-Meteo)', data: historicalData.filter(d => d.aqi_om != null && d.aqi_om > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_om) })) },
-    { name: 'AQI (Visual Crossing)', data: historicalData.filter(d => d.aqi_vc != null && d.aqi_vc > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_vc) })) }
+    { name: 'AQI (Open-Meteo)', data: historicalData.filter(d => d.aqi_om != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_om) })) },
+    { name: 'AQI (Visual Crossing)', data: historicalData.filter(d => d.aqi_vc != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.aqi_vc) })) }
   ].filter(s => s.data.length > 0);
 
   const rainSeries = [
-    { name: 'Rain (Open-Meteo)', data: historicalData.filter(d => d.rain_om != null && d.rain_om > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_om) })) },
-    { name: 'Rain (Visual Crossing)', data: historicalData.filter(d => d.rain_vc != null && d.rain_vc > 0).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_vc) })) }
+    { name: 'Rain (Open-Meteo)', data: historicalData.filter(d => d.rain_om != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_om) })) },
+    { name: 'Rain (Visual Crossing)', data: historicalData.filter(d => d.rain_vc != null).map(d => ({ x: new Date(d.date).getTime(), y: parseFloat(d.rain_vc) })) }
   ].filter(s => s.data.length > 0);
 
+  // Calculate date range boundaries based on selected time range
+  const getDateRangeBoundaries = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+
+    if (timeRange === '24h') {
+      startDate.setHours(endDate.getHours() - 24);
+    } else if (timeRange === '7d') {
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (timeRange === '30d') {
+      startDate.setDate(endDate.getDate() - 30);
+    } else if (timeRange === '90d') {
+      startDate.setDate(endDate.getDate() - 90);
+    } else if (timeRange === '1yr') {
+      startDate.setFullYear(endDate.getFullYear() - 1);
+    } else if (timeRange === '5yr') {
+      startDate.setFullYear(endDate.getFullYear() - 5);
+    } else if (timeRange === '10yr') {
+      startDate.setFullYear(endDate.getFullYear() - 10);
+    }
+
+    return {
+      min: startDate.getTime(),
+      max: endDate.getTime()
+    };
+  };
+
+  const dateRangeBoundaries = getDateRangeBoundaries();
 
   const commonOptions = {
     chart: {
@@ -304,6 +302,8 @@ const HistoricalPage = () => {
     },
     xaxis: {
       type: 'datetime',
+      min: dateRangeBoundaries.min,
+      max: dateRangeBoundaries.max,
       labels: { format: 'dd MMM yyyy' },
       tooltip: { enabled: false }
     },
@@ -534,8 +534,6 @@ const HistoricalPage = () => {
                   <option value="temperature">Temperature</option>
                   <option value="aqi">Air Quality (AQI)</option>
                   <option value="rainfall">Rainfall</option>
-                  <option value="pollutants">Pollutants</option>
-                  <option value="daily_averages">Daily Averages</option>
                 </select>
               </div>
 
@@ -618,15 +616,19 @@ const HistoricalPage = () => {
             </div>
           )}
 
-          {/* Pollutant Trends Analysis */}
-          <div className="lg:col-span-2">
-            <PollutantTrends historyData={historicalData} />
-          </div>
+          {/* Pollutant Trends Analysis - Only show for API data OR researcher with pollution data */}
+          {dataSource !== 'researcher' && (
+            <div className="lg:col-span-2">
+              <PollutantTrends historyData={historicalData} />
+            </div>
+          )}
 
-          {/* Daily Pollution Averages */}
-          <div className="lg:col-span-2">
-            <DailyPollutionAverages historyData={historicalData} />
-          </div>
+          {/* Daily Pollution Averages - Only show for API data OR researcher with pollution data */}
+          {dataSource !== 'researcher' && (
+            <div className="lg:col-span-2">
+              <DailyPollutionAverages historyData={historicalData} />
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center p-10 text-slate-500">

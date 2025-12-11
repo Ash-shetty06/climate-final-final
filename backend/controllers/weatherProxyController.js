@@ -145,18 +145,6 @@ export const getHistoricalData = async (req, res) => {
             }
         });
 
-        const vcPromise = axios.get(`https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${startDate}/${adjustedEndDate}`, {
-            params: {
-                key: process.env.VISUAL_CROSSING_KEY,
-                unitGroup: 'metric',
-                include: 'days',
-                elements: 'datetime,temp,precip,aqi'
-            }
-        }).catch(err => {
-            console.warn("Visual Crossing API error:", err.message);
-            return { data: { days: [] } };
-        });
-
         const aqiPromise = axios.get(AQI_API_URL, {
             params: {
                 latitude: lat,
@@ -171,14 +159,14 @@ export const getHistoricalData = async (req, res) => {
             return { data: { hourly: { time: [], pm2_5: [], pm10: [], ozone: [], nitrogen_dioxide: [] } } };
         });
 
-        const [openMeteoRes, vcRes, aqiRes] = await Promise.all([
+        // Only fetch Open-Meteo and AQI - skip Visual Crossing for speed
+        const [openMeteoRes, aqiRes] = await Promise.all([
             openMeteoPromise,
-            vcPromise,
             aqiPromise
         ]);
 
         const omDaily = openMeteoRes.data.daily;
-        const vcDays = vcRes.data.days || [];
+        const vcDays = []; // No Visual Crossing data
         const aqiHourly = aqiRes.data.hourly || { time: [], pm2_5: [], pm10: [], ozone: [], nitrogen_dioxide: [] };
 
         if (!omDaily || !omDaily.time) {
