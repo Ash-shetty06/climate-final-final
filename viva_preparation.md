@@ -4,6 +4,43 @@ This document explains the code location and logic for each feature you requeste
 
 ---
 
+## 📂 Project Structure & File Roles
+
+This section explains what each folder contains and what key files do.
+
+### **Root Directory**
+- **`src/`**: Contains all the Frontend (React) code. This is what the user sees in the browser.
+- **`backend/`**: Contains the Server (Node.js/Express) code. This handles the database and API keys.
+- **`App.jsx`**: The main container for the frontend application. It sets up the routing (navigation) between pages.
+- **`package.json`**: Lists all the libraries (dependencies) installed in the project.
+- **`start.sh`**: A helper script to start both the frontend and backend servers at once.
+
+### **Frontend (`src/`)**
+- **`pages/`**: Full-page components. Each file here corresponds to a route (URL).
+  - `LandingPage.jsx`: The first page you see with the 4 cards.
+  - `DashboardPage.jsx`: The main weather dashboard.
+  - `HistoricalPage.jsx`: The graphs and research data page.
+  - `ComparePage.jsx`: The city comparison tool.
+  - `LoginPage.jsx` / `RegisterPage.jsx`: Authentication pages.
+- **`components/`**: Reusable UI blocks used inside pages.
+  - `Navbar.jsx`: The top navigation bar.
+  - `HealthAdvicePanel.jsx`: The box showing health tips based on AQI.
+  - `IndiaMapSelector.jsx`: The interactive map component.
+  - `SummaryCard.jsx`: The small white cards showing Temp, Humidity, etc.
+- **`services/`**: Files that talk to the backend or external APIs.
+  - `weatherApi.js`: Fetches weather data from Open-Meteo or the backend.
+  - `authService.js`: Handles login, registration, and storing user tokens.
+  - `researchDataService.js`: Handles uploading and fetching CSV files.
+
+### **Backend (`backend/`)**
+- **`server.js`**: The entry point of the backend. It starts the server and connects to the database.
+- **`models/`**: Defines the structure of data stored in MongoDB (e.g., User, WeatherData).
+- **`routes/`**: Defines the API endpoints (URLs like `/api/auth/login`).
+- **`controllers/`**: The actual logic for each API endpoint (e.g., checking passwords, saving files).
+- **`middleware/`**: Code that runs before controllers, like checking if a user is logged in (`auth.js`).
+
+---
+
 ### 1. Multi-Source Weather Card Navigation
 **Question:** When I click on the first card (Multi-Source Weather), how does it take me to the dashboard?
 **Location:** `src/pages/LandingPage.jsx` (Lines 42-47)
@@ -338,3 +375,23 @@ const tempDiff = (dataB.temp - dataA.temp);
 **Explanation:**
 - The page renders two `<ComparisonCard>` components side-by-side.
 - It calculates the value differences (logic lines) and displays a "Comparison Insight" text block at the bottom.
+
+---
+
+### 20. Health & Activity Advice
+**Question:** Where is the code for the health advices?
+**Location:** `src/components/HealthAdvicePanel.jsx` (Entire file, specifically lines 8-37 for logic)
+**Code:**
+```javascript
+// AQI Advice Logic
+if (aqi <= 50) {
+  aqiAdvice = "Air quality is excellent...";
+} else if (aqi <= 100) { ... }
+
+// Weather Advice Logic
+if (temp > 35) weatherAdvice.push("Extreme heat!...");
+```
+**Explanation:**
+- The `HealthAdvicePanel` component takes `aqi`, `temp`, and `humidity` as props.
+- It uses a series of `if-else` statements to determine the appropriate advice string and color theme (e.g., green for good, red for bad).
+- It renders these advice strings in a styled panel.
